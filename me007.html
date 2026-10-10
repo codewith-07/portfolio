@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth selection:bg-amber-400 selection:text-black">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AURELIA STUDIOS | Bespoke Digital Flagships for Luxury Palaces, Banquets & Resorts</title>
+
+  <!-- Typography: Cormorant Garamond, Plus Jakarta Sans & Space Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Three.js (r128) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            serif: ['"Cormorant Garamond"', 'serif'],
+            mono: ['"Space Mono"', 'monospace'],
+          },
+          colors: {
+            void: '#030406',
+            surface: '#080A0F',
+            cardBg: '#0F121A',
+            luxuryGold: {
+              300: '#F5E1A4',
+              400: '#E8CA72',
+              500: '#D4AF37',
+              600: '#B89428',
+              700: '#94741B',
+            },
+            accentCyan: '#38BDF8',
+            emeraldPeak: '#10B981',
+          },
+          boxShadow: {
+            'glow-gold': '0 0 50px -8px rgba(212, 175, 55, 0.3)',
+            'glow-cyan': '0 0 45px -8px rgba(56, 189, 248, 0.25)',
+            'apple-card': '0 30px 60px -15px rgba(0,0,0,0.85)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Sleek custom scrollbars */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #030406; }
+    ::-webkit-scrollbar-thumb { background: #1B202D; border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: #D4AF37; }
+
+    .glass-panel {
+      background: rgba(15, 18, 26, 0.78);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-panel-hover {
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-panel-hover:hover {
+      border-color: rgba(212, 175, 55, 0.45);
+      transform: translateY(-3px);
+      box-shadow: 0 20px 40px -15px rgba(212, 175, 55, 0.2);
+    }
+
+    .text-gold-shimmer {
+      background: linear-gradient(135deg, #FFF9E6 0%, #D4AF37 50%, #9E7A18 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    #webgl-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.85;
+    }
+
+    #cursor-glow {
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(212, 175, 55, 0.06) 0%, rgba(56, 189, 248, 0.02) 40%, transparent 70%);
+      pointer-events: none;
+      z-index: 1;
+      transform: translate(-50%, -50%);
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      border-radius: 999px;
+      background: #181d2a;
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #F5E1A4, #D4AF37);
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(212, 175, 55, 0.7);
+      border: 2px solid #030406;
+    }
+
+    .demo-tab-btn.active {
+      background: rgba(212, 175, 55, 0.15);
+      border-color: rgba(212, 175, 55, 0.6);
+      color: #FFF;
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+    }
+    .demo-subnav-btn.active {
+      border-bottom: 2px solid #D4AF37;
+      color: #F5E1A4;
+    }
+  </style>
+</head>
+<body class="bg-void text-stone-200 min-h-screen relative font-sans antialiased overflow-x-hidden">
+
+  <!-- Interactive 3D Canvas -->
+  <canvas id="webgl-canvas"></canvas>
+  <div id="cursor-glow"></div>
+
+  <!-- Audio Synthesizer Logic -->
+  <script>
+    let audioCtx = null;
+    let audioMuted = false;
+    function initHarmonicAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    function playChime(freqs = [528, 792, 1056]) {
+      if (audioMuted) return;
+      try {
+        initHarmonicAudio();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const now = audioCtx.currentTime;
+        freqs.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+          gain.gain.setValueAtTime(0.02, now + idx * 0.04);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.04 + 0.6);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + idx * 0.04);
+          osc.stop(now + idx * 0.04 + 0.65);
+        });
+      } catch (e) {}
+    }
+    function toggleAudio() {
+      audioMuted = !audioMuted;
+      const icon = document.getElementById('audioToggleIcon');
+      const text = document.getElementById('audioToggleText');
+      if (audioMuted) {
+        icon.className = 'fa-solid fa-volume-xmark text-rose-400';
+        text.innerText = 'Sound Muted';
+      } else {
+        icon.className = 'fa-solid fa-volume-high text-luxuryGold-400';
+        text.innerText = 'Chimes On';
+        playChime();
+      }
+    }
+  </script>
+
+  <!-- Sticky Luxury Header -->
+  <header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+      <div class="glass-panel rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-2xl border border-white/10">
+        
+        <a href="#hero" onclick="playChime()" class="flex items-center gap-3 group">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-stone-900 to-stone-800 border border-white/20 flex items-center justify-center p-0.5 group-hover:border-luxuryGold-400 transition-colors">
+            <span class="font-serif text-xl font-bold text-luxuryGold-400 group-hover:scale-110 transition-transform">✦</span>
+          </div>
+          <div>
+            <div class="font-serif text-lg tracking-wider text-white font-bold leading-none flex items-center gap-1.5">
+              <span>AURELIA</span>
+              <span class="text-[10px] font-mono uppercase tracking-widest text-luxuryGold-400 border border-luxuryGold-500/30 px-1.5 py-0.5 rounded">STUDIOS</span>
+            </div>
+            <p class="text-[9px] font-mono text-stone-400 tracking-widest uppercase mt-0.5">Hospitality Flagship Architects</p>
+          </div>
+        </a>
+
+        <nav class="hidden lg:flex items-center gap-7 text-xs font-medium tracking-wider uppercase text-stone-300">
+          <a href="#demo-showroom" onclick="playChime()" class="text-luxuryGold-300 hover:text-white transition-colors flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Live Website Showroom (3 Venues)
+          </a>
+          <a href="#prestige-battle" onclick="playChime()" class="hover:text-white transition-colors">Broker vs Flagship</a>
+          <a href="#revenue-engine" onclick="playChime()" class="hover:text-white transition-colors">Loss Audit Calculator</a>
+          <a href="#packages" onclick="playChime()" class="hover:text-white transition-colors">Investment Tiers</a>
+        </nav>
+
+        <div class="flex items-center gap-3">
+          <button onclick="toggleAudio()" class="px-3 py-1.5 rounded-xl glass-panel text-[11px] font-mono text-stone-300 hover:text-white flex items-center gap-2 border border-white/10">
+            <i id="audioToggleIcon" class="fa-solid fa-volume-high text-luxuryGold-400"></i>
+            <span id="audioToggleText" class="hidden sm:inline">Chimes On</span>
+          </button>
+
+          <a href="#demo-showroom" onclick="playChime()" class="px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-luxuryGold-500 to-luxuryGold-600 hover:from-luxuryGold-400 hover:to-luxuryGold-500 text-black font-semibold text-xs tracking-wide shadow-glow-gold transition-all duration-300 flex items-center gap-2">
+            <span>Test Live Demos</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+
+  <!-- Hero Section -->
+  <section id="hero" class="relative z-10 pt-36 pb-20 sm:pt-44 sm:pb-32 overflow-hidden">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      
+      <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full glass-panel border-luxuryGold-500/30 text-stone-200 text-xs font-mono tracking-widest uppercase mb-8 shadow-lg">
+        <span class="w-2 h-2 rounded-full bg-luxuryGold-400 shadow-glow-gold animate-ping"></span>
+        <span>Engineered Exclusively for Luxury Banquets, Resorts & Marriage Palaces</span>
+      </div>
+
+      <h1 class="text-4xl sm:text-6xl lg:text-7xl font-serif font-bold text-white tracking-tight leading-[1.08] max-w-5xl mx-auto">
+        Stop Handing 18% of Every Wedding to Brokers. <br class="hidden sm:inline" />
+        <span class="text-gold-shimmer italic font-normal">Command Direct Advances</span> With a Sovereign Digital Flagship.
+      </h1>
+
+      <p class="mt-8 text-base sm:text-xl text-stone-300 font-sans max-w-3xl mx-auto font-light leading-relaxed">
+        We do not build generic template sites. We engineer <strong>Stripe-grade autonomous booking engines</strong> for wedding estates. Clients inspect your royal mandap, test catering per-plate pricing, check Shubh Muhurat lagna dates, and lock token advances directly into your bank account.
+      </p>
+
+      <div class="mt-12 flex flex-wrap items-center justify-center gap-5">
+        <a href="#demo-showroom" onclick="playChime()" class="px-8 py-4 rounded-xl bg-gradient-to-r from-luxuryGold-400 via-luxuryGold-500 to-amber-600 text-black font-bold text-sm tracking-wide shadow-glow-gold hover:scale-[1.02] transition-all flex items-center gap-3">
+          <i class="fa-solid fa-play text-xs"></i>
+          <span>Experience 3 Real Live Website Demos</span>
+        </a>
+
+        <a href="https://wa.me/919999999999?text=Hello%20Aurelia%20Studios,%20we%20want%20to%20build%20a%20flagship%20website%20for%20our%20venue." target="_blank" onclick="playChime()" class="px-8 py-4 rounded-xl glass-panel glass-panel-hover text-white font-medium text-sm tracking-wide border-white/10 flex items-center gap-3">
+          <i class="fa-brands fa-whatsapp text-emerald-400 text-base"></i>
+          <span>Chat With Our Principal Architect</span>
+        </a>
+      </div>
+
+      <!-- Quick Metrics Proof -->
+      <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto pt-8 border-t border-white/10 text-center">
+        <div class="p-3">
+          <div class="font-serif text-3xl font-bold text-white">0%</div>
+          <div class="text-[11px] font-mono text-stone-400 uppercase mt-1">Intermediary Commission</div>
+        </div>
+        <div class="p-3">
+          <div class="font-serif text-3xl font-bold text-luxuryGold-400">₹42+ Cr</div>
+          <div class="text-[11px] font-mono text-stone-400 uppercase mt-1">Direct Client Revenue Saved</div>
+        </div>
+        <div class="p-3">
+          <div class="font-serif text-3xl font-bold text-accentCyan">&lt; 1.2s</div>
+          <div class="text-[11px] font-mono text-stone-400 uppercase mt-1">Ultra-Fast 4K Image CDN</div>
+        </div>
+        <div class="p-3">
+          <div class="font-serif text-3xl font-bold text-emeraldPeak">5 Days</div>
+          <div class="text-[11px] font-mono text-stone-400 uppercase mt-1">Full Turnkey Deployment</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ========================================================================= -->
+  <!-- 3 FULLY INTERACTIVE MULTI-SECTION REAL LIVE WEBSITE DEMOS -->
+  <!-- ========================================================================= -->
+  <section id="demo-showroom" class="relative z-10 py-24 bg-surface/90 border-t border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Section Header -->
+      <div class="text-center max-w-3xl mx-auto mb-12">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-luxuryGold-500/10 border border-luxuryGold-500/30 text-luxuryGold-400 text-[11px] font-mono uppercase tracking-widest mb-3">
+          <i class="fa-solid fa-laptop-code"></i> Not Static Images · Real Working Websites
+        </div>
+        <h2 class="text-3xl sm:text-5xl font-serif font-bold text-white tracking-tight">
+          Live Interactive Website Showroom
+        </h2>
+        <p class="text-stone-300 text-sm sm:text-base mt-3 font-light">
+          Click the venue types below. Each demo features <strong class="text-luxuryGold-300">working internal navigation tabs, catering calculators, real date checkers, and instant direct WhatsApp booking buttons</strong>.
+        </p>
+      </div>
+
+      <!-- Demo Selector Tabs -->
+      <div class="flex flex-wrap items-center justify-center gap-3 mb-8">
+        <button onclick="switchActiveDemo('palace')" id="tabDemoPalace" class="demo-tab-btn active px-5 py-3 rounded-2xl glass-panel border border-luxuryGold-500/60 bg-luxuryGold-500/15 text-white text-xs font-semibold flex items-center gap-3 transition-all shadow-glow-gold">
+          <i class="fa-solid fa-crown text-luxuryGold-400 text-base"></i>
+          <div class="text-left">
+            <span class="block leading-none font-bold">DEMO 1: Royal Wedding Palace</span>
+            <span class="text-[10px] text-stone-400 font-mono">The Imperial Rajvilas Palace & Banquets</span>
+          </div>
+        </button>
+
+        <button onclick="switchActiveDemo('resort')" id="tabDemoResort" class="demo-tab-btn px-5 py-3 rounded-2xl glass-panel border border-white/10 hover:border-white/25 text-stone-300 hover:text-white text-xs font-medium flex items-center gap-3 transition-all">
+          <i class="fa-solid fa-umbrella-beach text-accentCyan text-base"></i>
+          <div class="text-left">
+            <span class="block leading-none font-bold">DEMO 2: Luxury Destination Resort</span>
+            <span class="text-[10px] text-stone-400 font-mono">The Azure Vista Resort & Spa</span>
+          </div>
+        </button>
+
+        <button onclick="switchActiveDemo('lawn')" id="tabDemoLawn" class="demo-tab-btn px-5 py-3 rounded-2xl glass-panel border border-white/10 hover:border-white/25 text-stone-300 hover:text-white text-xs font-medium flex items-center gap-3 transition-all">
+          <i class="fa-solid fa-tree text-emeraldPeak text-base"></i>
+          <div class="text-left">
+            <span class="block leading-none font-bold">DEMO 3: Mega 4000+ Guest Lawn</span>
+            <span class="text-[10px] text-stone-400 font-mono">The Emerald Royal Lawns & Country Club</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Viewport & Action Controls -->
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-5 px-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-mono text-stone-400 uppercase mr-2 hidden sm:inline">Simulator Mode:</span>
+          <button id="btnSimMacbook" onclick="setSimulatorViewport('desktop')" class="px-3.5 py-1.5 rounded-xl bg-luxuryGold-500 text-black text-xs font-bold flex items-center gap-2 transition">
+            <i class="fa-solid fa-laptop"></i> MacBook View
+          </button>
+          <button id="btnSimIphone" onclick="setSimulatorViewport('mobile')" class="px-3.5 py-1.5 rounded-xl glass-panel text-stone-300 hover:text-white text-xs font-medium flex items-center gap-2 transition">
+            <i class="fa-solid fa-mobile-screen-button"></i> iPhone 16 Pro View
+          </button>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button onclick="launchFullscreenDemo()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-luxuryGold-400 to-amber-500 hover:from-luxuryGold-300 hover:to-luxuryGold-400 text-black text-xs font-bold flex items-center gap-2 shadow-glow-gold transition">
+            <i class="fa-solid fa-up-right-and-down-left-from-center text-xs"></i>
+            <span>Open 100% Fullscreen Real Demo</span>
+          </button>
+
+          <a id="btnClaimDemoWhatsApp" href="https://wa.me/919999999999?text=Hello%20Aurelia%20Studios,%20I%20love%20the%20Royal%20Wedding%20Palace%20demo%20and%20want%20this%20website%20for%20my%20venue." target="_blank" class="px-4 py-2 rounded-xl bg-emeraldPeak hover:bg-emerald-400 text-black font-bold text-xs flex items-center gap-2 shadow-lg transition">
+            <i class="fa-brands fa-whatsapp text-sm"></i>
+            <span id="btnClaimDemoLabel">Get This Palace Website In 5 Days</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Simulator Stage -->
+      <div class="w-full flex justify-center">
+        <div id="demoViewportStage" class="w-full max-w-full transition-all duration-500 rounded-3xl overflow-hidden glass-panel border border-white/20 shadow-apple-card bg-void">
+          
+          <!-- Browser Top Chrome Bar -->
+          <div class="bg-cardBg/95 px-5 py-3 border-b border-white/10 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+              <div class="ml-4 flex items-center gap-2 px-3 py-1 rounded-lg bg-black/60 border border-white/10 text-stone-400 font-mono text-[11px] max-w-xs sm:max-w-md truncate">
+                <i class="fa-solid fa-lock text-[9px] text-emeraldPeak"></i>
+                <span id="simBrowserAddress">https://imperialrajvilas-estate.com/reservations</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3 text-[11px] font-mono">
+              <span class="text-luxuryGold-400 flex items-center gap-1.5 hidden sm:inline-flex">
+                <span class="w-2 h-2 rounded-full bg-emeraldPeak animate-pulse"></span>
+                AUTONOMOUS VENUE ENGINE ACTIVE
+              </span>
+            </div>
+          </div>
+
+          <!-- ========================================================================= -->
+          <!-- DEMO 1: THE IMPERIAL RAJVILAS PALACE & GRAND BANQUETS -->
+          <!-- ========================================================================= -->
+          <div id="demoInstancePalace" class="demo-instance p-4 sm:p-6 space-y-6">
+            
+            <!-- Palace Internal Website Header -->
+            <div class="glass-panel rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between gap-4 border-luxuryGold-500/30">
+              <div class="flex items-center gap-3">
+                <span class="font-serif text-xl font-bold text-luxuryGold-400 tracking-wider">THE IMPERIAL RAJVILAS</span>
+                <span class="text-[9px] font-mono uppercase tracking-widest px-2 py-0.5 rounded bg-luxuryGold-500/20 text-luxuryGold-300 border border-luxuryGold-500/30 hidden sm:inline">Royal Wedding Palace</span>
+              </div>
+
+              <!-- Palace Sub-Page Navigation Tabs -->
+              <div class="flex items-center gap-4 sm:gap-6 text-xs font-mono uppercase tracking-wider text-stone-300">
+                <button onclick="setPalaceSubTab('overview')" id="palaceSubTabOverview" class="demo-subnav-btn active py-1 font-bold">Overview</button>
+                <button onclick="setPalaceSubTab('halls')" id="palaceSubTabHalls" class="demo-subnav-btn py-1">Grand Halls (3)</button>
+                <button onclick="setPalaceSubTab('calendar')" id="palaceSubTabCalendar" class="demo-subnav-btn py-1 text-luxuryGold-300">Shubh Muhurat</button>
+                <button onclick="setPalaceSubTab('catering')" id="palaceSubTabCatering" class="demo-subnav-btn py-1">Catering Calculator</button>
+                <button onclick="setPalaceSubTab('booking')" id="palaceSubTabBooking" class="demo-subnav-btn py-1 text-emeraldPeak">Direct Token</button>
+              </div>
+            </div>
+
+            <!-- Palace SUB-TAB 1: OVERVIEW -->
+            <div id="palaceTabContentOverview" class="palace-subtab-section space-y-6">
+              <div class="relative rounded-2xl overflow-hidden border border-white/15 h-80 sm:h-[400px] group">
+                <img id="palaceHeroImg" src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=85" alt="Imperial Palace Mandap" class="w-full h-full object-cover transition-all duration-700 brightness-90 group-hover:scale-105" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+
+                <div class="absolute top-6 left-6 right-6">
+                  <span class="px-3 py-1 rounded-full text-[10px] font-mono tracking-widest uppercase bg-black/80 backdrop-blur-md text-luxuryGold-400 border border-luxuryGold-400/40">
+                    2,500 GUEST CAPACITY · HERITAGE FORT ARCHITECTURE
+                  </span>
+                  <h3 class="font-serif text-2xl sm:text-4xl font-bold text-white mt-2 max-w-xl">
+                    Dynastic Weddings In The Lap Of Rajputana Royalty.
+                  </h3>
+                  <p class="text-xs sm:text-sm text-stone-300 font-light mt-1 max-w-lg">
+                    35-foot vaulted hand-painted ceilings, 24K gold leaf mandap arches, sound-proof indoor acoustic walls, and 4 acres of private fountains.
+                  </p>
+                </div>
+
+                <div class="absolute bottom-6 left-6 right-6 flex flex-wrap gap-2">
+                  <button onclick="setPalacePhoto('mandap')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-luxuryGold-400/60 text-luxuryGold-300 bg-black/80 flex items-center gap-1.5">
+                    <i class="fa-solid fa-om text-xs"></i> 24K Royal Mandap
+                  </button>
+                  <button onclick="setPalacePhoto('ballroom')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-white/10 text-stone-300 hover:text-white bg-black/60 flex items-center gap-1.5">
+                    <i class="fa-solid fa-crown text-xs"></i> Crystal Ballroom
+                  </button>
+                  <button onclick="setPalacePhoto('courtyard')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-white/10 text-stone-300 hover:text-white bg-black/60 flex items-center gap-1.5">
+                    <i class="fa-solid fa-water text-xs"></i> Lotus Fountain Courtyard
+                  </button>
+                  <button onclick="setPalacePhoto('dining')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-white/10 text-stone-300 hover:text-white bg-black/60 flex items-center gap-1.5">
+                    <i class="fa-solid fa-utensils text-xs"></i> Shahi Dining Pavilion
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quick Specs Ribbon -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div class="glass-panel p-4 rounded-xl border-white/10">
+                  <div class="font-serif text-2xl font-bold text-luxuryGold-400">2,500</div>
+                  <div class="text-[10px] font-mono text-stone-400 uppercase mt-1">Simultaneous Guests</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-white/10">
+                  <div class="font-serif text-2xl font-bold text-white">450 Cars</div>
+                  <div class="text-[10px] font-mono text-stone-400 uppercase mt-1">Multi-Level Valet Parking</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-white/10">
+                  <div class="font-serif text-2xl font-bold text-white">32 Keys</div>
+                  <div class="text-[10px] font-mono text-stone-400 uppercase mt-1">Palatial Guest Suites</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-white/10">
+                  <div class="font-serif text-2xl font-bold text-emeraldPeak">0% Broker</div>
+                  <div class="text-[10px] font-mono text-stone-400 uppercase mt-1">Direct Client Advance</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Palace SUB-TAB 2: GRAND HALLS & LAWNS -->
+            <div id="palaceTabContentHalls" class="palace-subtab-section hidden space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="glass-panel p-5 rounded-2xl border-white/10 flex flex-col justify-between hover:border-luxuryGold-500/40 transition">
+                  <div>
+                    <img src="https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=800&q=80" alt="Darbar Hall" class="w-full h-44 object-cover rounded-xl mb-4" />
+                    <span class="text-[10px] font-mono text-luxuryGold-400 uppercase tracking-widest">Main Indoor Palace</span>
+                    <h4 class="font-serif text-xl font-bold text-white mt-1">The Grand Darbar Hall</h4>
+                    <p class="text-xs text-stone-400 mt-2 font-light">
+                      Central air-conditioned pillarless hall accommodating up to 2,000 guests with Swarovski chandeliers.
+                    </p>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-white/10 flex justify-between items-center text-xs">
+                    <span class="font-mono text-stone-400">Capacity: 2,000</span>
+                    <button onclick="setPalaceSubTab('booking')" class="text-luxuryGold-300 font-bold hover:underline">Select Hall →</button>
+                  </div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-2xl border-white/10 flex flex-col justify-between hover:border-luxuryGold-500/40 transition">
+                  <div>
+                    <img src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=800&q=80" alt="Sheesh Mahal" class="w-full h-44 object-cover rounded-xl mb-4" />
+                    <span class="text-[10px] font-mono text-luxuryGold-400 uppercase tracking-widest">Intimate / Ring Ceremony</span>
+                    <h4 class="font-serif text-xl font-bold text-white mt-1">The Sheesh Mahal Pavilion</h4>
+                    <p class="text-xs text-stone-400 mt-2 font-light">
+                      Handcrafted Belgian mirror-work walls designed for intimate Haldi, Mehendi, and Sangeet celebrations.
+                    </p>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-white/10 flex justify-between items-center text-xs">
+                    <span class="font-mono text-stone-400">Capacity: 600</span>
+                    <button onclick="setPalaceSubTab('booking')" class="text-luxuryGold-300 font-bold hover:underline">Select Hall →</button>
+                  </div>
+                </div>
+
+                <div class="glass-panel p-5 rounded-2xl border-white/10 flex flex-col justify-between hover:border-luxuryGold-500/40 transition">
+                  <div>
+                    <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80" alt="Mandap Lawn" class="w-full h-44 object-cover rounded-xl mb-4" />
+                    <span class="text-[10px] font-mono text-luxuryGold-400 uppercase tracking-widest">Open-Air Royale</span>
+                    <h4 class="font-serif text-xl font-bold text-white mt-1">Mughal Fountain Courtyard</h4>
+                    <p class="text-xs text-stone-400 mt-2 font-light">
+                      Open-air courtyard with lighted royal fountains and raised dynastic mandap for Pheras under the night stars.
+                    </p>
+                  </div>
+                  <div class="mt-4 pt-3 border-t border-white/10 flex justify-between items-center text-xs">
+                    <span class="font-mono text-stone-400">Capacity: 1,200</span>
+                    <button onclick="setPalaceSubTab('booking')" class="text-luxuryGold-300 font-bold hover:underline">Select Hall →</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Palace SUB-TAB 3: SHUBH MUHURAT CALENDAR CHECKER -->
+            <div id="palaceTabContentCalendar" class="palace-subtab-section hidden space-y-6">
+              <div class="glass-panel p-6 sm:p-8 rounded-2xl border-luxuryGold-500/30">
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4 mb-6">
+                  <div>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-luxuryGold-400">Real-Time Hindu Panchang & Wedding Calendar Sync</span>
+                    <h4 class="font-serif text-2xl font-bold text-white">Shubh Muhurat Wedding Date Availability Engine</h4>
+                  </div>
+                  <div class="px-3 py-1 rounded bg-emerald-500/15 border border-emerald-500/30 text-emeraldPeak text-xs font-mono">
+                    <i class="fa-solid fa-circle text-[8px] mr-1 animate-pulse"></i> 2026–2027 Calendar Live
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                  <div class="md:col-span-5 space-y-4">
+                    <div>
+                      <label class="block text-xs font-mono text-stone-400 mb-2">Select Your Wedding Date</label>
+                      <input type="date" id="palaceDateInput" value="2026-11-28" onchange="checkPalaceDateAvailability()" class="w-full bg-void border border-white/15 rounded-xl px-4 py-3 text-white text-xs focus:border-luxuryGold-400 outline-none" />
+                    </div>
+
+                    <div>
+                      <label class="block text-xs font-mono text-stone-400 mb-2">Preferred Event Slot</label>
+                      <select id="palaceSlotInput" onchange="checkPalaceDateAvailability()" class="w-full bg-void border border-white/15 rounded-xl px-4 py-3 text-white text-xs focus:border-luxuryGold-400 outline-none">
+                        <option value="evening" selected>Night Wedding & Reception (7:00 PM – 4:00 AM)</option>
+                        <option value="morning">Morning Pheras & Lunch (8:00 AM – 4:00 PM)</option>
+                        <option value="full">Full 24-Hour Palace Estate Buyout</option>
+                      </select>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-void border border-white/10 text-xs text-stone-300 space-y-1.5">
+                      <div class="font-semibold text-white">Upcoming Peak Shubh Dates:</div>
+                      <div class="text-[11px] text-stone-400 flex flex-wrap gap-2 pt-1 font-mono">
+                        <span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 cursor-pointer hover:border-luxuryGold-400" onclick="setDatePreset('2026-11-22')">22 Nov 2026</span>
+                        <span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 cursor-pointer hover:border-luxuryGold-400" onclick="setDatePreset('2026-11-28')">28 Nov 2026</span>
+                        <span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 cursor-pointer hover:border-luxuryGold-400" onclick="setDatePreset('2026-12-05')">05 Dec 2026</span>
+                        <span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 cursor-pointer hover:border-luxuryGold-400" onclick="setDatePreset('2026-12-14')">14 Dec 2026</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="md:col-span-7 p-6 rounded-2xl bg-void border border-luxuryGold-500/40 flex flex-col justify-between space-y-6">
+                    <div id="palaceDateStatusCard">
+                      <div class="flex items-center gap-3">
+                        <span class="w-3 h-3 rounded-full bg-emeraldPeak animate-ping"></span>
+                        <span class="font-serif text-xl font-bold text-emeraldPeak" id="palaceDateStatusTitle">Date Available for Royal Booking!</span>
+                      </div>
+                      <p class="text-xs text-stone-300 mt-2 font-light leading-relaxed" id="palaceDateStatusDesc">
+                        Saturday, 28 November 2026 has <strong class="text-luxuryGold-300">Shubh Dev Uthani Muhurat</strong>. The Grand Darbar Hall and Mughal Courtyard are currently open for direct locking without broker charges.
+                      </p>
+                    </div>
+
+                    <div class="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <div class="text-[10px] font-mono text-stone-400 uppercase">Direct Token Lock</div>
+                        <div class="text-lg font-serif font-bold text-white">₹1,00,000 Refundable Advance</div>
+                      </div>
+                      <button onclick="setPalaceSubTab('booking')" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-luxuryGold-400 to-amber-500 text-black font-bold text-xs tracking-wider uppercase shadow-glow-gold hover:scale-105 transition">
+                        Lock This Date Now →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Palace SUB-TAB 4: CATERING MENU & PLATE CALCULATOR -->
+            <div id="palaceTabContentCatering" class="palace-subtab-section hidden space-y-6">
+              <div class="glass-panel p-6 sm:p-8 rounded-2xl border-white/10 space-y-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+                  <div>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-luxuryGold-400">Maharaja 7-Course Culinary Architecture</span>
+                    <h4 class="font-serif text-2xl font-bold text-white">Live Royal Food & Catering Estimator</h4>
+                  </div>
+                  <button onclick="simulatePdfDownload('The Imperial Rajvilas Catering Menu 2026.pdf')" class="px-3.5 py-1.5 rounded-xl glass-panel border-white/20 text-xs font-mono text-white flex items-center gap-2 hover:border-luxuryGold-400 transition">
+                    <i class="fa-solid fa-file-pdf text-rose-400"></i> Download Full Menu Card
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div onclick="selectPalaceCateringTier('shahi')" id="tierCardShahi" class="p-4 rounded-xl border border-luxuryGold-500/60 bg-luxuryGold-500/10 cursor-pointer transition">
+                    <span class="text-[10px] font-mono text-luxuryGold-400 uppercase">Tier 1 · Traditional</span>
+                    <h5 class="font-serif text-lg font-bold text-white mt-1">Shahi Dastarkhwan</h5>
+                    <div class="text-xl font-bold text-luxuryGold-300 font-mono my-2">₹2,800 <span class="text-xs text-stone-400 font-normal">/ plate</span></div>
+                    <ul class="text-xs text-stone-300 space-y-1 mt-2">
+                      <li>• 6 Welcome Drinks & Mocktail Bar</li>
+                      <li>• 8 Live Chaat & Street Food Stalls</li>
+                      <li>• 14 Main Course (Pure Ghee Prep)</li>
+                      <li>• 6 Royal Indian Desserts & Kulfi</li>
+                    </ul>
+                  </div>
+
+                  <div onclick="selectPalaceCateringTier('rajputana')" id="tierCardRajputana" class="p-4 rounded-xl border border-white/10 bg-void cursor-pointer hover:border-white/30 transition">
+                    <span class="text-[10px] font-mono text-stone-400 uppercase">Tier 2 · Gold Signature</span>
+                    <h5 class="font-serif text-lg font-bold text-white mt-1">Rajputana Gold Feast</h5>
+                    <div class="text-xl font-bold text-white font-mono my-2">₹3,900 <span class="text-xs text-stone-400 font-normal">/ plate</span></div>
+                    <ul class="text-xs text-stone-300 space-y-1 mt-2">
+                      <li>• 10 Global Starters & Woodfired Pizza</li>
+                      <li>• 12 Live Cooking Island Pavilions</li>
+                      <li>• 18 Main Course with Silver Thali</li>
+                      <li>• Liquid Nitrogen Ice Cream Bar</li>
+                    </ul>
+                  </div>
+
+                  <div onclick="selectPalaceCateringTier('michelin')" id="tierCardMichelin" class="p-4 rounded-xl border border-white/10 bg-void cursor-pointer hover:border-white/30 transition">
+                    <span class="text-[10px] font-mono text-stone-400 uppercase">Tier 3 · Ultra Luxury</span>
+                    <h5 class="font-serif text-lg font-bold text-white mt-1">7-Course Michelin Fusion</h5>
+                    <div class="text-xl font-bold text-white font-mono my-2">₹5,400 <span class="text-xs text-stone-400 font-normal">/ plate</span></div>
+                    <ul class="text-xs text-stone-300 space-y-1 mt-2">
+                      <li>• Dedicated White-Glove Butler Service</li>
+                      <li>• Japanese Sushi & Mediterranean Bar</li>
+                      <li>• 24 Gourmet Main Course Courses</li>
+                      <li>• Artisanal French Patisserie Table</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Live Tally Formula -->
+                <div class="p-5 rounded-2xl bg-void border border-white/10 flex flex-wrap items-center justify-between gap-4">
+                  <div class="flex items-center gap-4">
+                    <label class="text-xs font-mono text-stone-400">Expected Guests:</label>
+                    <input type="number" id="palaceGuestNumberInput" value="1000" min="200" max="3000" step="50" onchange="calculatePalaceFoodCost()" class="w-32 bg-cardBg border border-white/20 rounded-xl px-3 py-1.5 text-white font-mono text-sm focus:border-luxuryGold-400 outline-none" />
+                  </div>
+                  <div class="text-right">
+                    <span class="text-[10px] font-mono text-stone-400 uppercase block">Total Catering Budget Estimate</span>
+                    <span class="font-serif text-2xl font-bold text-luxuryGold-400" id="palaceCateringTotalDisplay">₹28,00,000 + GST</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Palace SUB-TAB 5: DIRECT WHATSAPP BOOKING FORM -->
+            <div id="palaceTabContentBooking" class="palace-subtab-section hidden space-y-6">
+              <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                <div class="lg:col-span-7 glass-panel p-6 sm:p-8 rounded-2xl border-white/10 space-y-4">
+                  <span class="text-[10px] font-mono uppercase tracking-widest text-luxuryGold-400">Zero Broker Markup</span>
+                  <h4 class="font-serif text-2xl font-bold text-white">Direct Palace Reservation Dispatch</h4>
+                  
+                  <div class="space-y-3 text-xs">
+                    <div>
+                      <label class="block text-stone-400 font-mono mb-1">Host / Family Head Name</label>
+                      <input type="text" id="palaceHostName" value="Maharaj Vikramaditya" class="w-full bg-void border border-white/15 rounded-xl px-4 py-2.5 text-white outline-none focus:border-luxuryGold-400" />
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-stone-400 font-mono mb-1">WhatsApp Phone Number</label>
+                        <input type="text" id="palaceHostPhone" value="+91 98765 43210" class="w-full bg-void border border-white/15 rounded-xl px-4 py-2.5 text-white outline-none focus:border-luxuryGold-400" />
+                      </div>
+                      <div>
+                        <label class="block text-stone-400 font-mono mb-1">City of Residence</label>
+                        <input type="text" id="palaceHostCity" value="New Delhi" class="w-full bg-void border border-white/15 rounded-xl px-4 py-2.5 text-white outline-none focus:border-luxuryGold-400" />
+                      </div>
+                    </div>
+                    <div>
+                      <label class="block text-stone-400 font-mono mb-1">Special Requirements (Rooms, Fireworks, Drone Entry)</label>
+                      <textarea id="palaceHostNotes" rows="2" class="w-full bg-void border border-white/15 rounded-xl px-4 py-2 text-white outline-none focus:border-luxuryGold-400">Requires 25 guest suites, drone entry setup for bride, and live shehnai orchestra at reception gates.</textarea>
+                    </div>
+                  </div>
+
+                  <button onclick="dispatchPalaceBookingLead()" class="w-full py-3.5 rounded-xl bg-emeraldPeak hover:bg-emerald-400 text-black font-bold text-xs tracking-wider uppercase transition flex items-center justify-center gap-2 shadow-lg">
+                    <i class="fa-brands fa-whatsapp text-base"></i>
+                    <span>Send Pre-Filled Booking Specs to Palace Owner on WhatsApp</span>
+                  </button>
+                </div>
+
+                <div class="lg:col-span-5 glass-panel p-6 sm:p-8 rounded-2xl border-luxuryGold-500/30 flex flex-col justify-between space-y-4">
+                  <div>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-luxuryGold-400">Why Direct Booking Wins</span>
+                    <h4 class="font-serif text-xl font-bold text-white mt-1">Direct Client Escrow Guarantees</h4>
+
+                    <div class="mt-4 space-y-2.5 text-xs text-stone-300 font-light">
+                      <div class="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 flex gap-2">
+                        <i class="fa-solid fa-check text-luxuryGold-400 mt-0.5"></i>
+                        <span><strong>Official Date Block Receipt:</strong> Generated instantly with GST invoice.</span>
+                      </div>
+                      <div class="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 flex gap-2">
+                        <i class="fa-solid fa-check text-luxuryGold-400 mt-0.5"></i>
+                        <span><strong>Complimentary Bridal Suite:</strong> 2 nights stay included with makeup studio.</span>
+                      </div>
+                      <div class="p-2.5 rounded-xl bg-white/[0.03] border border-white/5 flex gap-2">
+                        <i class="fa-solid fa-check text-luxuryGold-400 mt-0.5"></i>
+                        <span><strong>No Broker Middleman:</strong> Direct access to Executive Chef and GM.</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="p-3.5 rounded-xl bg-void border border-white/10 text-center font-mono text-[11px] text-stone-400">
+                    Direct advance held in Axis/HDFC Palace Escrow.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ========================================================================= -->
+          <!-- DEMO 2: THE AZURE VISTA RESORT & SPA -->
+          <!-- ========================================================================= -->
+          <div id="demoInstanceResort" class="demo-instance hidden p-4 sm:p-6 space-y-6">
+            
+            <!-- Resort Internal Header -->
+            <div class="glass-panel rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between gap-4 border-accentCyan/30">
+              <div class="flex items-center gap-3">
+                <span class="font-serif text-xl font-bold text-accentCyan tracking-wider">THE AZURE VISTA</span>
+                <span class="text-[9px] font-mono uppercase tracking-widest px-2 py-0.5 rounded bg-accentCyan/20 text-cyan-300 border border-accentCyan/30 hidden sm:inline">5-Star Luxury Destination Resort & Spa</span>
+              </div>
+
+              <!-- Resort Sub-Navigation -->
+              <div class="flex items-center gap-4 sm:gap-6 text-xs font-mono uppercase tracking-wider text-stone-300">
+                <button onclick="setResortSubTab('rooms')" id="resortSubTabRooms" class="demo-subnav-btn active py-1 font-bold">Suites & Villas</button>
+                <button onclick="setResortSubTab('calculator')" id="resortSubTabCalculator" class="demo-subnav-btn py-1 text-cyan-300">Live Tariff Engine</button>
+                <button onclick="setResortSubTab('dining')" id="resortSubTabDining" class="demo-subnav-btn py-1">Beach Club & Spa</button>
+                <button onclick="setResortSubTab('direct')" id="resortSubTabDirect" class="demo-subnav-btn py-1 text-emeraldPeak">0% OTA Booking</button>
+              </div>
+            </div>
+
+            <!-- Resort SUB-TAB 1: SUITES & VILLAS -->
+            <div id="resortTabContentRooms" class="resort-subtab-section space-y-6">
+              <div class="relative rounded-2xl overflow-hidden border border-white/15 h-80 sm:h-[400px] group">
+                <img id="resortHeroImg" src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1600&q=85" alt="Resort Pool Villa" class="w-full h-full object-cover transition-all duration-700 brightness-90 group-hover:scale-105" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+
+                <div class="absolute top-6 left-6 right-6">
+                  <span class="px-3 py-1 rounded-full text-[10px] font-mono tracking-widest uppercase bg-black/80 backdrop-blur-md text-accentCyan border border-accentCyan/40">
+                    120 KEYS · PRIVATE BEACHFRONT & INFINITY POOLS
+                  </span>
+                  <h3 class="font-serif text-2xl sm:text-4xl font-bold text-white mt-2 max-w-xl">
+                    Private Plunge Pool Villas & Ayurvedic Sanctuary.
+                  </h3>
+                  <p class="text-xs sm:text-sm text-stone-300 font-light mt-1 max-w-lg">
+                    Private cliffside cabanas, helipad transfers, 24/7 dedicated personal butler service, and organic farm-to-table dining.
+                  </p>
+                </div>
+
+                <div class="absolute bottom-6 left-6 right-6 flex flex-wrap gap-2">
+                  <button onclick="setResortPhoto('villa')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-accentCyan/60 text-cyan-300 bg-black/80 flex items-center gap-1.5">
+                    <i class="fa-solid fa-water-ladder text-xs"></i> Plunge Pool Villa
+                  </button>
+                  <button onclick="setResortPhoto('chalet')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-white/10 text-stone-300 hover:text-white bg-black/60 flex items-center gap-1.5">
+                    <i class="fa-solid fa-water text-xs"></i> Oceanfront Chalet
+                  </button>
+                  <button onclick="setResortPhoto('spa')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-white/10 text-stone-300 hover:text-white bg-black/60 flex items-center gap-1.5">
+                    <i class="fa-solid fa-spa text-xs"></i> Ayurvedic Spa Pavilion
+                  </button>
+                  <button onclick="setResortPhoto('sunset')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-white/10 text-stone-300 hover:text-white bg-black/60 flex items-center gap-1.5">
+                    <i class="fa-solid fa-champagne-glasses text-xs"></i> Sunset Deck
+                  </button>
+                </div>
+              </div>
+
+              <!-- Suite Cards -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="glass-panel p-4 rounded-2xl border-white/10">
+                  <div class="font-serif text-lg font-bold text-white">Deluxe Garden Villa</div>
+                  <div class="text-accentCyan font-mono text-sm mt-1">₹18,500 / night</div>
+                  <p class="text-xs text-stone-400 mt-2 font-light">650 sq.ft private garden courtyard with open-sky rain shower.</p>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl border-accentCyan/40 bg-accentCyan/5">
+                  <div class="font-serif text-lg font-bold text-white">Private Pool Villa</div>
+                  <div class="text-accentCyan font-mono text-sm mt-1">₹32,000 / night</div>
+                  <p class="text-xs text-stone-400 mt-2 font-light">1,100 sq.ft villa with private heated infinity plunge pool & sun deck.</p>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl border-white/10">
+                  <div class="font-serif text-lg font-bold text-white">Presidential Royal Suite</div>
+                  <div class="text-accentCyan font-mono text-sm mt-1">₹65,000 / night</div>
+                  <p class="text-xs text-stone-400 mt-2 font-light">2,400 sq.ft duplex penthouse with dedicated butler & yacht dock.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resort SUB-TAB 2: LIVE TARIFF & DURATION CALCULATOR -->
+            <div id="resortTabContentCalculator" class="resort-subtab-section hidden space-y-6">
+              <div class="glass-panel p-6 sm:p-8 rounded-2xl border-accentCyan/30 space-y-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+                  <div>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-accentCyan">Autonomous Direct Reservation Folio</span>
+                    <h4 class="font-serif text-2xl font-bold text-white">Live Room Tariff & Stay Selector</h4>
+                  </div>
+                  <span class="px-3 py-1 rounded bg-accentCyan/20 text-cyan-300 border border-accentCyan/30 text-xs font-mono">
+                    Save 22% vs Booking.com / MakeMyTrip
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+                  <div>
+                    <label class="block text-stone-400 mb-2">Check-In Date</label>
+                    <input type="date" id="resortCheckInDate" value="2026-12-10" onchange="calculateResortTotalTariff()" class="w-full bg-void border border-white/15 rounded-xl px-4 py-3 text-white outline-none focus:border-accentCyan" />
+                  </div>
+                  <div>
+                    <label class="block text-stone-400 mb-2">Number of Nights</label>
+                    <select id="resortNightsSelect" onchange="calculateResortTotalTariff()" class="w-full bg-void border border-white/15 rounded-xl px-4 py-3 text-white outline-none focus:border-accentCyan">
+                      <option value="2">2 Nights (Weekend Getaway)</option>
+                      <option value="3" selected>3 Nights (Royal Wedding Buyout)</option>
+                      <option value="5">5 Nights (Holistic Retreat)</option>
+                      <option value="7">7 Nights (Complete Villa Residency)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-stone-400 mb-2">Villa Category</label>
+                    <select id="resortCategorySelect" onchange="calculateResortTotalTariff()" class="w-full bg-void border border-white/15 rounded-xl px-4 py-3 text-white outline-none focus:border-accentCyan">
+                      <option value="18500">Deluxe Garden Villa (₹18,500/nt)</option>
+                      <option value="32000" selected>Private Pool Villa (₹32,000/nt)</option>
+                      <option value="65000">Presidential Royal Suite (₹65,000/nt)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="p-6 rounded-2xl bg-void border border-white/10 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                  <div class="space-y-2 text-xs font-mono">
+                    <div class="flex justify-between text-stone-400">
+                      <span>Room Nights Base:</span>
+                      <strong class="text-white" id="resortDisplayBase">₹96,000</strong>
+                    </div>
+                    <div class="flex justify-between text-stone-400">
+                      <span>Gourmet Buffet Breakfast:</span>
+                      <strong class="text-emeraldPeak">Complimentary (Direct Perk)</strong>
+                    </div>
+                    <div class="flex justify-between text-stone-400">
+                      <span>Luxury GST (18%):</span>
+                      <strong class="text-white" id="resortDisplayGst">₹17,280</strong>
+                    </div>
+                    <div class="pt-3 border-t border-white/10 flex justify-between text-sm">
+                      <span class="text-white font-bold">Total Direct Bill:</span>
+                      <span class="font-serif text-2xl font-bold text-accentCyan" id="resortDisplayTotal">₹1,13,280</span>
+                    </div>
+                  </div>
+
+                  <div class="space-y-3">
+                    <button onclick="dispatchResortBooking()" class="w-full py-3.5 rounded-xl bg-accentCyan hover:bg-cyan-300 text-black font-bold text-xs tracking-wider uppercase transition flex items-center justify-center gap-2 shadow-glow-cyan">
+                      <i class="fa-brands fa-whatsapp text-base"></i>
+                      <span>Confirm Direct Reservation on WhatsApp</span>
+                    </button>
+                    <p class="text-[10px] text-center text-stone-400 font-mono">
+                      Guest receives instant automated PDF confirmation with reservation token.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resort SUB-TAB 3: DINING & SPA -->
+            <div id="resortTabContentDining" class="resort-subtab-section hidden space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-panel p-6 rounded-2xl border-white/10">
+                  <img src="https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=800&q=80" alt="Spa" class="w-full h-48 object-cover rounded-xl mb-4" />
+                  <h4 class="font-serif text-xl font-bold text-white">Ananda Ayurvedic Sanctuary</h4>
+                  <p class="text-xs text-stone-300 mt-2 font-light">Traditional Kerala Panchakarma therapies, herbal steam baths, and sunrise cliffside yoga pavilions.</p>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl border-white/10">
+                  <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80" alt="Dining" class="w-full h-48 object-cover rounded-xl mb-4" />
+                  <h4 class="font-serif text-xl font-bold text-white">The Azure Beach Club</h4>
+                  <p class="text-xs text-stone-300 mt-2 font-light">Sunset Mediterranean grill, wood-fired oven pizzas, and signature coastal artisanal cocktail pairings.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Resort SUB-TAB 4: DIRECT -->
+            <div id="resortTabContentDirect" class="resort-subtab-section hidden space-y-6">
+              <div class="glass-panel p-8 rounded-2xl border-accentCyan/30 text-center max-w-xl mx-auto space-y-4">
+                <i class="fa-solid fa-shield-halved text-accentCyan text-3xl"></i>
+                <h4 class="font-serif text-2xl font-bold text-white">Zero OTA Commission Guarantee</h4>
+                <p class="text-xs text-stone-300 font-light leading-relaxed">
+                  When a luxury guest reserves via this direct engine, the resort retains 100% of the folio. No 22% cuts to Booking.com, Agoda, or MakeMyTrip.
+                </p>
+                <button onclick="setResortSubTab('calculator')" class="px-6 py-3 rounded-xl bg-accentCyan text-black font-bold text-xs uppercase tracking-wider">
+                  Test Live Booking Engine →
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ========================================================================= -->
+          <!-- DEMO 3: THE EMERALD ROYAL LAWNS & COUNTRY CLUB -->
+          <!-- ========================================================================= -->
+          <div id="demoInstanceLawn" class="demo-instance hidden p-4 sm:p-6 space-y-6">
+            
+            <!-- Lawn Internal Header -->
+            <div class="glass-panel rounded-2xl px-5 py-3 flex flex-wrap items-center justify-between gap-4 border-emeraldPeak/30">
+              <div class="flex items-center gap-3">
+                <span class="font-serif text-xl font-bold text-emeraldPeak tracking-wider">EMERALD ROYAL LAWNS</span>
+                <span class="text-[9px] font-mono uppercase tracking-widest px-2 py-0.5 rounded bg-emeraldPeak/20 text-emerald-300 border border-emeraldPeak/30 hidden sm:inline">50,000 Sq.Ft Open Celebration Grounds</span>
+              </div>
+
+              <!-- Lawn Sub-Navigation -->
+              <div class="flex items-center gap-4 sm:gap-6 text-xs font-mono uppercase tracking-wider text-stone-300">
+                <button onclick="setLawnSubTab('grounds')" id="lawnSubTabGrounds" class="demo-subnav-btn active py-1 font-bold">Lawn Grounds</button>
+                <button onclick="setLawnSubTab('themes')" id="lawnSubTabThemes" class="demo-subnav-btn py-1 text-emerald-300">Decor Themes</button>
+                <button onclick="setLawnSubTab('calculator')" id="lawnSubTabCalculator" class="demo-subnav-btn py-1">Cost Estimator</button>
+                <button onclick="setLawnSubTab('quote')" id="lawnSubTabQuote" class="demo-subnav-btn py-1 text-emeraldPeak">Direct Lock</button>
+              </div>
+            </div>
+
+            <!-- Lawn SUB-TAB 1: GROUNDS OVERVIEW -->
+            <div id="lawnTabContentGrounds" class="lawn-subtab-section space-y-6">
+              <div class="relative rounded-2xl overflow-hidden border border-white/15 h-80 sm:h-[400px] group">
+                <img id="lawnHeroImg" src="https://images.unsplash.com/photo-1545232979-fbf68fe9b10d?auto=format&fit=crop&w=1600&q=85" alt="Lawn Grounds" class="w-full h-full object-cover transition-all duration-700 brightness-90 group-hover:scale-105" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+
+                <div class="absolute top-6 left-6 right-6">
+                  <span class="px-3 py-1 rounded-full text-[10px] font-mono tracking-widest uppercase bg-black/80 backdrop-blur-md text-emeraldPeak border border-emeraldPeak/40">
+                    50,000 SQ FT MANICURED TURF · 4,000+ GUEST CAPACITY
+                  </span>
+                  <h3 class="font-serif text-2xl sm:text-4xl font-bold text-white mt-2 max-w-xl">
+                    Epic Scale Receptions, Sangeet Arenas & Drone Bridal Entries.
+                  </h3>
+                  <p class="text-xs sm:text-sm text-stone-300 font-light mt-1 max-w-lg">
+                    Dedicated 400+ vehicle valet parking lot, 125 KVA dual silent backup generators, and two 5-star bridal air-conditioned suites.
+                  </p>
+                </div>
+
+                <div class="absolute bottom-6 left-6 right-6 flex flex-wrap gap-2">
+                  <button onclick="setLawnPhoto('aerial')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-emeraldPeak/60 text-emerald-300 bg-black/80 flex items-center gap-1.5">
+                    <i class="fa-solid fa-drone text-xs"></i> 4K Drone Aerial View
+                  </button>
+                  <button onclick="setLawnPhoto('stage')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-white/10 text-stone-300 hover:text-white bg-black/60 flex items-center gap-1.5">
+                    <i class="fa-solid fa-champagne-glasses text-xs"></i> Mega Reception Stage
+                  </button>
+                  <button onclick="setLawnPhoto('lighting')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-white/10 text-stone-300 hover:text-white bg-black/60 flex items-center gap-1.5">
+                    <i class="fa-solid fa-bolt text-xs"></i> Concert Truss Rigging
+                  </button>
+                  <button onclick="setLawnPhoto('buffet')" class="px-3 py-1.5 rounded-xl text-xs font-medium glass-panel border-white/10 text-stone-300 hover:text-white bg-black/60 flex items-center gap-1.5">
+                    <i class="fa-solid fa-utensils text-xs"></i> Open Sky Dining Lawn
+                  </button>
+                </div>
+              </div>
+
+              <!-- Lawn Ground Badges -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div class="glass-panel p-4 rounded-xl border-white/10">
+                  <div class="font-serif text-2xl font-bold text-emeraldPeak">50,000</div>
+                  <div class="text-[10px] font-mono text-stone-400 uppercase mt-1">Sq Ft Manicured Turf</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-white/10">
+                  <div class="font-serif text-2xl font-bold text-white">400 Valet</div>
+                  <div class="text-[10px] font-mono text-stone-400 uppercase mt-1">Dedicated Car Paved Lot</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-white/10">
+                  <div class="font-serif text-2xl font-bold text-white">125 KVA</div>
+                  <div class="text-[10px] font-mono text-stone-400 uppercase mt-1">Dual Silent Genset</div>
+                </div>
+                <div class="glass-panel p-4 rounded-xl border-white/10">
+                  <div class="font-serif text-2xl font-bold text-white">2 AC Suites</div>
+                  <div class="text-[10px] font-mono text-stone-400 uppercase mt-1">Private Bridal Green Rooms</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lawn SUB-TAB 2: DECOR THEMES -->
+            <div id="lawnTabContentThemes" class="lawn-subtab-section hidden space-y-6">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div onclick="selectLawnTheme('boho')" id="themeBoxBoho" class="glass-panel p-5 rounded-2xl border-emeraldPeak/60 bg-emeraldPeak/10 cursor-pointer transition">
+                  <span class="text-[10px] font-mono text-emeraldPeak uppercase">Theme A</span>
+                  <h4 class="font-serif text-lg font-bold text-white mt-1">Bohemian Pastel Floral</h4>
+                  <p class="text-xs text-stone-400 mt-2 font-light">Fairy-light canopy, dry pampas grass installations, and wooden rustic dining pavilions.</p>
+                  <div class="mt-4 text-xs font-mono font-bold text-emerald-300">₹5,00,000 Setup Cost</div>
+                </div>
+
+                <div onclick="selectLawnTheme('royal')" id="themeBoxRoyal" class="glass-panel p-5 rounded-2xl border-white/10 bg-void cursor-pointer hover:border-white/30 transition">
+                  <span class="text-[10px] font-mono text-stone-400 uppercase">Theme B</span>
+                  <h4 class="font-serif text-lg font-bold text-white mt-1">Royal Rajputana Red & Gold</h4>
+                  <p class="text-xs text-stone-400 mt-2 font-light">Deep crimson velvet drapes, hand-carved golden pillars, and 10,000 marigold garlands.</p>
+                  <div class="mt-4 text-xs font-mono font-bold text-white">₹7,50,000 Setup Cost</div>
+                </div>
+
+                <div onclick="selectLawnTheme('concert')" id="themeBoxConcert" class="glass-panel p-5 rounded-2xl border-white/10 bg-void cursor-pointer hover:border-white/30 transition">
+                  <span class="text-[10px] font-mono text-stone-400 uppercase">Theme C</span>
+                  <h4 class="font-serif text-lg font-bold text-white mt-1">Sangeet Concert Arena</h4>
+                  <p class="text-xs text-stone-400 mt-2 font-light">Line-array acoustic speakers, motorized LED wall stage, and computerized beam lights.</p>
+                  <div class="mt-4 text-xs font-mono font-bold text-white">₹9,50,000 Setup Cost</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lawn SUB-TAB 3: COST ESTIMATOR -->
+            <div id="lawnTabContentCalculator" class="lawn-subtab-section hidden space-y-6">
+              <div class="glass-panel p-6 sm:p-8 rounded-2xl border-emeraldPeak/30 space-y-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+                  <div>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-emeraldPeak">Instant Direct Ground Tariff</span>
+                    <h4 class="font-serif text-2xl font-bold text-white">Lawn Rental & Setup Quotation</h4>
+                  </div>
+                  <span class="text-xs font-mono px-3 py-1 rounded bg-emeraldPeak/20 text-emerald-300">
+                    Complimentary Valet & Sanitation Staff
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                  <div>
+                    <label class="block text-stone-400 mb-2">Event Date</label>
+                    <input type="date" id="lawnEventDateInput" value="2026-11-15" class="w-full bg-void border border-white/15 rounded-xl px-4 py-3 text-white outline-none focus:border-emeraldPeak" />
+                  </div>
+                  <div>
+                    <label class="block text-stone-400 mb-2">Gathering Size</label>
+                    <select id="lawnGatheringSelect" onchange="calculateLawnTotalQuote()" class="w-full bg-void border border-white/15 rounded-xl px-4 py-3 text-white outline-none focus:border-emeraldPeak">
+                      <option value="350000">1,500 Guests (Lawn Ground Buyout ₹3,50,000)</option>
+                      <option value="500000" selected>2,500 – 4,000 Guests (Full Mega Buyout ₹5,00,000)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="p-6 rounded-2xl bg-void border border-white/10 flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <span class="text-xs font-mono text-stone-400 block">Total Lawn + Selected Decor Estimate:</span>
+                    <span class="font-serif text-3xl font-bold text-emeraldPeak" id="lawnDisplayTotalDisplay">₹10,00,000 + GST</span>
+                  </div>
+                  <button onclick="setLawnSubTab('quote')" class="px-6 py-3 rounded-xl bg-emeraldPeak hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider transition">
+                    Lock Lawn Date on WhatsApp →
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lawn SUB-TAB 4: DIRECT LOCK -->
+            <div id="lawnTabContentQuote" class="lawn-subtab-section hidden space-y-6">
+              <div class="glass-panel p-8 rounded-2xl border-emeraldPeak/30 text-center max-w-xl mx-auto space-y-4">
+                <i class="fa-brands fa-whatsapp text-emeraldPeak text-4xl"></i>
+                <h4 class="font-serif text-2xl font-bold text-white">Direct Lawn Booking Channel</h4>
+                <p class="text-xs text-stone-300 font-light leading-relaxed">
+                  Bypass all local event brokers. Communicate directly with the lawn owner with pre-loaded event date, decor theme, and guest capacity.
+                </p>
+                <button onclick="dispatchLawnBookingLead()" class="w-full py-3.5 rounded-xl bg-emeraldPeak hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider transition">
+                  Open WhatsApp Chat With Owner Now
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- ========================================================================= -->
+  <!-- FULLSCREEN IMMERSIVE LIVE DEMO MODAL -->
+  <!-- ========================================================================= -->
+  <div id="fullscreenDemoModal" class="fixed inset-0 z-50 hidden bg-black/95 backdrop-blur-2xl flex flex-col">
+    <!-- Top Client Conversion Banner -->
+    <div class="glass-panel px-6 py-3.5 border-b border-luxuryGold-500/30 flex items-center justify-between z-10">
+      <div class="flex items-center gap-3">
+        <span class="w-2.5 h-2.5 rounded-full bg-emeraldPeak animate-pulse"></span>
+        <div>
+          <span class="text-xs font-serif font-bold text-white tracking-wide" id="modalActiveDemoName">The Imperial Rajvilas Palace & Grand Banquets</span>
+          <span class="text-[10px] font-mono text-luxuryGold-400 ml-2 hidden sm:inline">(Interactive Live Client Sandbox)</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <a id="modalBuyTemplateWhatsApp" href="#" target="_blank" class="px-4 py-2 rounded-xl bg-gradient-to-r from-luxuryGold-400 to-amber-500 text-black font-bold text-xs flex items-center gap-2 shadow-glow-gold hover:scale-105 transition">
+          <i class="fa-brands fa-whatsapp"></i>
+          <span>Want This Website For Your Property? Chat on WhatsApp</span>
+        </a>
+        <button onclick="closeFullscreenDemo()" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-sm transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Scrollable Sandbox Canvas -->
+    <div id="modalSandboxCanvas" class="flex-1 overflow-y-auto p-4 sm:p-8 max-w-7xl mx-auto w-full">
+      <!-- Injected clone of the active demo -->
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- COMMODITY DIRECTORY VS FLAGSHIP COMPARISON -->
+  <!-- ========================================================================= -->
+  <section id="prestige-battle" class="relative z-10 py-24 bg-void">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs font-mono font-bold tracking-widest uppercase text-luxuryGold-400">The Economic Truth</span>
+        <h2 class="text-3xl sm:text-5xl font-serif font-bold text-white mt-2">
+          Brokers & Portals vs Your Own Sovereign Flagship
+        </h2>
+        <p class="text-stone-300 text-sm sm:text-base mt-4 font-light">
+          When affluent families plan multi-crore weddings, portals pit you against 40 rivals and take an 18% cut. Here is why you need your own sovereign flagship:
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+        
+        <div class="glass-panel p-8 sm:p-10 rounded-3xl border border-rose-500/20 flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 text-xl mb-6">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-2xl font-serif font-bold text-white mb-2">Aggregator Directories</h3>
+            <p class="text-xs text-stone-400 font-mono mb-6">WedMeGood, Justdial, Booking.com, Local Brokers</p>
+
+            <div class="space-y-4 text-xs sm:text-sm text-stone-300">
+              <div class="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 flex gap-3">
+                <i class="fa-solid fa-xmark text-rose-400 mt-1"></i>
+                <div><strong>15%–20% Commission Hemorrhage:</strong> On a ₹40,00,000 wedding booking, you lose ₹6,00,000+ for a simple phone number forward.</div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 flex gap-3">
+                <i class="fa-solid fa-xmark text-rose-400 mt-1"></i>
+                <div><strong>Ruthless Discount Bidding Wars:</strong> Clients see 40 other banquets on the same screen, leading to exhausting per-plate price cuts.</div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-white/[0.02] border border-white/5 flex gap-3">
+                <i class="fa-solid fa-xmark text-rose-400 mt-1"></i>
+                <div><strong>Zero Brand Equity:</strong> You don't own the client's phone number or data. Stop paying monthly portal fees, and leads drop to zero.</div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-8 pt-4 border-t border-white/10 text-rose-400 font-mono text-xs">
+            Financial Outcome: Continuous Margin Bleed & Broker Dependence
+          </div>
+        </div>
+
+        <div class="glass-panel p-8 sm:p-10 rounded-3xl border border-luxuryGold-500/40 shadow-glow-gold flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-2xl bg-luxuryGold-500/20 border border-luxuryGold-500/40 flex items-center justify-center text-luxuryGold-400 text-xl mb-6">
+              <i class="fa-solid fa-gem"></i>
+            </div>
+            <h3 class="text-2xl font-serif font-bold text-white mb-2">Aurelia Bespoke Flagship</h3>
+            <p class="text-xs text-luxuryGold-400 font-mono mb-6">100% Owned Digital Architecture for Your Venue</p>
+
+            <div class="space-y-4 text-xs sm:text-sm text-stone-200">
+              <div class="p-3.5 rounded-xl bg-white/[0.04] border border-luxuryGold-500/20 flex gap-3">
+                <i class="fa-solid fa-check text-luxuryGold-400 mt-1"></i>
+                <div><strong>100% Retained Revenue:</strong> Every rupee of hall rental, luxury rooms, and royal catering enters your bank account directly.</div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-white/[0.04] border border-luxuryGold-500/20 flex gap-3">
+                <i class="fa-solid fa-check text-luxuryGold-400 mt-1"></i>
+                <div><strong>High-Ticket Filtered Inquiries:</strong> Interactive catering calculators and 4K tours answer all questions before clients even call.</div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-white/[0.04] border border-luxuryGold-500/20 flex gap-3">
+                <i class="fa-solid fa-check text-luxuryGold-400 mt-1"></i>
+                <div><strong>Direct Instant WhatsApp Closes:</strong> One click connects high-intent families to your phone with full guest specs ready.</div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-8 pt-4 border-t border-luxuryGold-500/30 text-luxuryGold-300 font-mono text-xs">
+            Financial Outcome: Uncontested Market Authority & Sovereign Wealth
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- REVENUE RECOVERY CALCULATOR -->
+  <section id="revenue-engine" class="relative z-10 py-24 bg-surface/90 border-t border-b border-white/10">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center max-w-3xl mx-auto mb-14">
+        <span class="text-xs font-mono font-bold tracking-widest uppercase text-luxuryGold-400">Financial Impact Estimator</span>
+        <h2 class="text-3xl sm:text-5xl font-serif font-bold text-white mt-2">
+          Calculate Your Annual Retained Capital
+        </h2>
+        <p class="text-stone-300 text-sm mt-3 font-light">
+          Adjust the sliders to estimate how many Lakhs you save every single year with a direct booking flagship:
+        </p>
+      </div>
+
+      <div class="glass-panel rounded-3xl p-6 sm:p-10 border border-white/15 shadow-apple-card">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          <div class="lg:col-span-7 space-y-6">
+            <div>
+              <div class="flex justify-between items-center mb-2 text-xs sm:text-sm">
+                <label class="font-medium text-stone-300">Annual Booked Wedding / Event Dates</label>
+                <span class="font-mono font-bold text-white px-3 py-1 rounded bg-black/60 border border-white/10" id="sliderDatesVal">40 Dates</span>
+              </div>
+              <input type="range" id="sliderDates" min="15" max="100" step="5" value="40" class="w-full" oninput="calculateSavings()" />
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center mb-2 text-xs sm:text-sm">
+                <label class="font-medium text-stone-300">Average Booking Value (Hall + F&B)</label>
+                <span class="font-mono font-bold text-luxuryGold-400 px-3 py-1 rounded bg-black/60 border border-white/10" id="sliderSpendVal">₹25,00,000</span>
+              </div>
+              <input type="range" id="sliderSpend" min="1000000" max="8000000" step="250000" value="2500000" class="w-full" oninput="calculateSavings()" />
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center mb-2 text-xs sm:text-sm">
+                <label class="font-medium text-stone-300">Third-Party Broker Commission Cut</label>
+                <span class="font-mono font-bold text-rose-400 px-3 py-1 rounded bg-black/60 border border-white/10" id="sliderCutVal">15%</span>
+              </div>
+              <input type="range" id="sliderCut" min="8" max="22" step="1" value="15" class="w-full" oninput="calculateSavings()" />
+            </div>
+          </div>
+
+          <div class="lg:col-span-5 p-8 rounded-2xl bg-void border border-luxuryGold-500/40 text-center space-y-6 shadow-2xl">
+            <div>
+              <span class="text-[10px] font-mono tracking-widest uppercase text-luxuryGold-400 block mb-2">ANNUAL COMMISSION SAVINGS</span>
+              <div class="text-4xl sm:text-5xl font-serif font-bold text-gold-shimmer" id="displaySavedProfit">₹1,50,00,000</div>
+              <p class="text-xs text-stone-400 font-sans mt-2">Saved directly into your venue business account.</p>
+            </div>
+
+            <a id="btnCalculatorWhatsApp" href="#" target="_blank" class="w-full py-4 rounded-xl bg-gradient-to-r from-luxuryGold-400 via-luxuryGold-500 to-amber-600 text-black font-bold text-xs tracking-wider uppercase transition shadow-glow-gold flex items-center justify-center gap-2">
+              <i class="fa-brands fa-whatsapp text-base"></i>
+              <span>Stop The Leakage · Claim Website</span>
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- INVESTMENT TIERS -->
+  <section id="packages" class="relative z-10 py-24 bg-void">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs font-mono font-bold tracking-widest uppercase text-luxuryGold-400">Fixed Turnkey Deployments</span>
+        <h2 class="text-3xl sm:text-5xl font-serif font-bold text-white mt-2">
+          Transparent Architecture Tiers
+        </h2>
+        <p class="text-stone-300 text-sm mt-3 font-light">
+          Delivered in 5 days with zero ongoing developer retainers. You own 100% of your source code and domain.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <div class="glass-panel p-8 rounded-3xl border-white/10 flex flex-col justify-between">
+          <div>
+            <span class="text-[10px] font-mono uppercase tracking-widest text-stone-400">Single Venue Lawn / Hall</span>
+            <h4 class="font-serif text-2xl font-bold text-white mt-1">Signature Estate</h4>
+            <div class="text-2xl font-serif font-bold text-white my-4">₹24,999 <span class="text-xs font-mono text-stone-400 font-normal">one-time</span></div>
+            <ul class="text-xs text-stone-300 space-y-2.5">
+              <li>• Responsive 4K Photo & Video Galleries</li>
+              <li>• Direct 1-Click WhatsApp Lead Generator</li>
+              <li>• Google Maps Top-3 Local SEO Setup</li>
+              <li>• 3 Turnkey Sub-Pages (Halls, Food, Contact)</li>
+            </ul>
+          </div>
+          <a href="https://wa.me/919999999999?text=Hello%20Aurelia%20Studios,%20I%20want%20the%20Signature%20Estate%20website%20plan." target="_blank" class="mt-8 w-full py-3 rounded-xl glass-panel text-white font-mono text-xs uppercase tracking-wider text-center hover:border-luxuryGold-400 transition">Deploy Signature →</a>
+        </div>
+
+        <div class="glass-panel p-8 rounded-3xl border-luxuryGold-500/50 shadow-glow-gold flex flex-col justify-between relative bg-luxuryGold-500/[0.03]">
+          <div class="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-luxuryGold-500 text-black font-mono font-bold text-[10px] uppercase">Most Popular</div>
+          <div>
+            <span class="text-[10px] font-mono uppercase tracking-widest text-luxuryGold-400">Grand Marriage Palace / Resort</span>
+            <h4 class="font-serif text-2xl font-bold text-white mt-1">Dynasty Flagship</h4>
+            <div class="text-2xl font-serif font-bold text-luxuryGold-400 my-4">₹44,999 <span class="text-xs font-mono text-stone-400 font-normal">one-time</span></div>
+            <ul class="text-xs text-stone-200 space-y-2.5">
+              <li>• <strong>Everything in Signature</strong> +</li>
+              <li>• Shubh Muhurat Hindu Wedding Calendar Sync</li>
+              <li>• Interactive 7-Course Catering Price Calculator</li>
+              <li>• Room Tariff & Multi-Night Stay Engine</li>
+              <li>• Downloadable PDF Brochure Generator</li>
+            </ul>
+          </div>
+          <a href="https://wa.me/919999999999?text=Hello%20Aurelia%20Studios,%20I%20want%20the%20Dynasty%20Flagship%20website%20plan." target="_blank" class="mt-8 w-full py-3 rounded-xl bg-gradient-to-r from-luxuryGold-400 to-amber-500 text-black font-bold text-xs uppercase tracking-wider text-center shadow-lg hover:scale-105 transition">Deploy Dynasty Flagship →</a>
+        </div>
+
+        <div class="glass-panel p-8 rounded-3xl border-white/10 flex flex-col justify-between">
+          <div>
+            <span class="text-[10px] font-mono uppercase tracking-widest text-accentCyan">Hotel Chains & Multi-Palace</span>
+            <h4 class="font-serif text-2xl font-bold text-white mt-1">Sovereign Empire</h4>
+            <div class="text-2xl font-serif font-bold text-white my-4">₹79,999 <span class="text-xs font-mono text-stone-400 font-normal">one-time</span></div>
+            <ul class="text-xs text-stone-300 space-y-2.5">
+              <li>• Multi-Property Chain Switcher</li>
+              <li>• 360° Matterport / Drone VR Integration</li>
+              <li>• Razorpay / UPI Zero-Fee Advance Gateway</li>
+              <li>• Automated SMS & WhatsApp CRM Auto-Replies</li>
+            </ul>
+          </div>
+          <a href="https://wa.me/919999999999?text=Hello%20Aurelia%20Studios,%20I%20want%20the%20Sovereign%20Empire%20plan." target="_blank" class="mt-8 w-full py-3 rounded-xl glass-panel text-white font-mono text-xs uppercase tracking-wider text-center hover:border-accentCyan transition">Deploy Sovereign →</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="relative z-10 py-16 bg-surface border-t border-white/10 text-stone-400 text-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <span class="font-serif text-lg font-bold text-luxuryGold-400">✦ AURELIA STUDIOS</span>
+        <span class="text-[11px] font-mono text-stone-500">· Bespoke Digital Flagships for Hospitality & Palaces</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="https://wa.me/919999999999?text=Hello%20Aurelia%20Studios,%20we%20want%20to%20build%20a%20hotel/banquet%20website." target="_blank" class="text-luxuryGold-400 hover:text-white transition flex items-center gap-1.5 font-mono text-xs">
+          <i class="fa-brands fa-whatsapp"></i> Chat On WhatsApp
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Persistent Floating WhatsApp Hub -->
+  <div class="fixed bottom-6 right-6 z-40">
+    <a href="https://wa.me/919999999999?text=Hello%20Aurelia%20Studios,%20we%20want%20to%20discuss%20building%20a%20website%20for%20our%20venue." target="_blank" onclick="playChime()" class="glass-panel px-4 py-3 rounded-2xl border border-luxuryGold-500/40 hover:border-luxuryGold-400 transition-all flex items-center gap-3 shadow-glow-gold hover:scale-105 group bg-cardBg/90">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center text-white text-lg">
+        <i class="fa-brands fa-whatsapp"></i>
+      </div>
+      <div class="text-left hidden sm:block">
+        <div class="text-[10px] font-mono tracking-widest uppercase text-stone-400">Direct Partner Desk</div>
+        <div class="text-xs font-serif font-bold text-white group-hover:text-luxuryGold-400">Claim Your Website</div>
+      </div>
+    </a>
+  </div>
+
+
+  <script>
+    /* -------------------------------------------------------------
+       1. THREE.JS 3D AMBIENT PAVILION ENGINE
+       ------------------------------------------------------------- */
+    let scene, camera, renderer, crystalGroup, particles;
+    let mouseX = 0, mouseY = 0, targetX = 0, targetY = 0;
+
+    function initThreeJS() {
+      const canvas = document.getElementById('webgl-canvas');
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+      camera.position.z = 7;
+
+      renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      crystalGroup = new THREE.Group();
+
+      const geo1 = new THREE.IcosahedronGeometry(2.8, 1);
+      const mat1 = new THREE.MeshBasicMaterial({ color: 0xD4AF37, wireframe: true, transparent: true, opacity: 0.16 });
+      crystalGroup.add(new THREE.Mesh(geo1, mat1));
+
+      const geo2 = new THREE.OctahedronGeometry(1.6, 0);
+      const mat2 = new THREE.MeshBasicMaterial({ color: 0x38BDF8, wireframe: true, transparent: true, opacity: 0.12 });
+      crystalGroup.add(new THREE.Mesh(geo2, mat2));
+
+      scene.add(crystalGroup);
+
+      const pCount = 180;
+      const pGeo = new THREE.BufferGeometry();
+      const pos = new Float32Array(pCount * 3);
+      for (let i = 0; i < pCount * 3; i++) pos[i] = (Math.random() - 0.5) * 16;
+      pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      particles = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.035, color: 0xD4AF37, transparent: true, opacity: 0.4 }));
+      scene.add(particles);
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        mouseX = (e.clientX / window.innerWidth) - 0.5;
+        mouseY = (e.clientY / window.innerHeight) - 0.5;
+        const glow = document.getElementById('cursor-glow');
+        if (glow) {
+          glow.style.left = `${e.clientX}px`;
+          glow.style.top = `${e.clientY}px`;
+        }
+      });
+    }
+
+    function animateThreeJS() {
+      requestAnimationFrame(animateThreeJS);
+      targetX += (mouseX - targetX) * 0.05;
+      targetY += (mouseY - targetY) * 0.05;
+
+      if (crystalGroup) {
+        crystalGroup.rotation.y += 0.0018;
+        crystalGroup.rotation.x += 0.0009;
+        crystalGroup.position.x = targetX * 1.4;
+        crystalGroup.position.y = -targetY * 1.4;
+      }
+      if (particles) particles.rotation.y += 0.0005;
+      renderer.render(scene, camera);
+    }
+
+    /* -------------------------------------------------------------
+       2. PRIMARY DEMO SWITCHER LOGIC (PALACE, RESORT, LAWN)
+       ------------------------------------------------------------- */
+    let currentActiveDemo = 'palace';
+    const demoConfigs = {
+      palace: {
+        name: 'The Imperial Rajvilas Palace & Grand Banquets',
+        url: 'https://imperialrajvilas-estate.com/reservations',
+        btnText: 'Get This Palace Website In 5 Days',
+        waPrompt: 'Hello Aurelia Studios! I tested The Imperial Rajvilas Palace & Grand Banquets live website demo and want this system for our marriage palace.'
+      },
+      resort: {
+        name: 'The Azure Vista Resort & Spa',
+        url: 'https://azurevista-resort.com/booking',
+        btnText: 'Get This Resort Website In 5 Days',
+        waPrompt: 'Hello Aurelia Studios! I tested The Azure Vista Resort demo and want this direct booking website for our luxury hotel/resort.'
+      },
+      lawn: {
+        name: 'The Emerald Royal Lawns & Country Club',
+        url: 'https://emeraldroyallawns.com/book-date',
+        btnText: 'Get This Lawn Website In 5 Days',
+        waPrompt: 'Hello Aurelia Studios! I tested The Emerald Royal Lawns demo and want this website for our party lawn.'
+      }
+    };
+
+    function switchActiveDemo(key) {
+      playChime();
+      currentActiveDemo = key;
+
+      // Update Tab Styles
+      ['palace', 'resort', 'lawn'].forEach(k => {
+        const btn = document.getElementById(`tabDemo${k.charAt(0).toUpperCase() + k.slice(1)}`);
+        const instance = document.getElementById(`demoInstance${k.charAt(0).toUpperCase() + k.slice(1)}`);
+        if (k === key) {
+          btn.classList.add('active');
+          instance.classList.remove('hidden');
+        } else {
+          btn.classList.remove('active');
+          instance.classList.add('hidden');
+        }
+      });
+
+      const conf = demoConfigs[key];
+      document.getElementById('simBrowserAddress').innerText = conf.url;
+      document.getElementById('btnClaimDemoLabel').innerText = conf.btnText;
+      document.getElementById('btnClaimDemoWhatsApp').href = `https://wa.me/919999999999?text=${encodeURIComponent(conf.waPrompt)}`;
+    }
+
+    /* -------------------------------------------------------------
+       3. VIEWPORT SWITCHER (MACBOOK VS IPHONE)
+       ------------------------------------------------------------- */
+    function setSimulatorViewport(mode) {
+      playChime();
+      const stage = document.getElementById('demoViewportStage');
+      const btnMac = document.getElementById('btnSimMacbook');
+      const btnIphone = document.getElementById('btnSimIphone');
+
+      if (mode === 'mobile') {
+        stage.style.maxWidth = '420px';
+        btnIphone.className = 'px-3.5 py-1.5 rounded-xl bg-luxuryGold-500 text-black text-xs font-bold flex items-center gap-2 transition';
+        btnMac.className = 'px-3.5 py-1.5 rounded-xl glass-panel text-stone-300 hover:text-white text-xs font-medium flex items-center gap-2 transition';
+      } else {
+        stage.style.maxWidth = '100%';
+        btnMac.className = 'px-3.5 py-1.5 rounded-xl bg-luxuryGold-500 text-black text-xs font-bold flex items-center gap-2 transition';
+        btnIphone.className = 'px-3.5 py-1.5 rounded-xl glass-panel text-stone-300 hover:text-white text-xs font-medium flex items-center gap-2 transition';
+      }
+    }
+
+    /* -------------------------------------------------------------
+       4. FULLSCREEN MODAL HANDLERS
+       ------------------------------------------------------------- */
+    function launchFullscreenDemo() {
+      playChime();
+      const modal = document.getElementById('fullscreenDemoModal');
+      const canvas = document.getElementById('modalSandboxCanvas');
+      const conf = demoConfigs[currentActiveDemo];
+
+      document.getElementById('modalActiveDemoName').innerText = conf.name;
+      document.getElementById('modalBuyTemplateWhatsApp').href = `https://wa.me/919999999999?text=${encodeURIComponent(conf.waPrompt)}`;
+
+      const activeInst = document.getElementById(`demoInstance${currentActiveDemo.charAt(0).toUpperCase() + currentActiveDemo.slice(1)}`);
+      canvas.innerHTML = '';
+      const clone = activeInst.cloneNode(true);
+      clone.classList.remove('hidden');
+      canvas.appendChild(clone);
+
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeFullscreenDemo() {
+      playChime();
+      document.getElementById('fullscreenDemoModal').classList.add('hidden');
+      document.body.style.overflow = 'auto';
+    }
+
+    /* -------------------------------------------------------------
+       5. DEMO 1 (PALACE) INTERNAL NAVIGATION & ENGINES
+       ------------------------------------------------------------- */
+    function setPalaceSubTab(tabName) {
+      playChime();
+      const tabs = ['overview', 'halls', 'calendar', 'catering', 'booking'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`palaceSubTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const sec = document.getElementById(`palaceTabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (btn) btn.classList.remove('active');
+        if (sec) sec.classList.add('hidden');
+      });
+
+      const activeBtn = document.getElementById(`palaceSubTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+      const activeSec = document.getElementById(`palaceTabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      if (activeSec) activeSec.classList.remove('hidden');
+    }
+
+    const palacePhotos = {
+      mandap: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=85',
+      ballroom: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1600&q=85',
+      courtyard: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1600&q=85',
+      dining: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1600&q=85'
+    };
+
+    function setPalacePhoto(key) {
+      playChime();
+      const img = document.getElementById('palaceHeroImg');
+      if (img) {
+        img.style.opacity = '0.3';
+        setTimeout(() => {
+          img.src = palacePhotos[key];
+          img.style.opacity = '1';
+        }, 180);
+      }
+    }
+
+    function setDatePreset(dateStr) {
+      document.getElementById('palaceDateInput').value = dateStr;
+      checkPalaceDateAvailability();
+    }
+
+    function checkPalaceDateAvailability() {
+      playChime();
+      const dateVal = document.getElementById('palaceDateInput').value;
+      const statusTitle = document.getElementById('palaceDateStatusTitle');
+      const statusDesc = document.getElementById('palaceDateStatusDesc');
+
+      if (dateVal === '2026-11-28' || dateVal === '2026-12-05') {
+        statusTitle.innerText = 'Date Available for Royal Booking!';
+        statusTitle.className = 'font-serif text-xl font-bold text-emeraldPeak';
+        statusDesc.innerHTML = `${dateVal} has auspicious <strong class="text-luxuryGold-300">Shubh Muhurat</strong>. Grand Darbar Hall is unbooked. Advance lock token active.`;
+      } else {
+        statusTitle.innerText = 'High Demand Date — Limited Slots';
+        statusTitle.className = 'font-serif text-xl font-bold text-luxuryGold-400';
+        statusDesc.innerHTML = `${dateVal} is in high demand. Morning slot is available; Evening slot pending family confirmation. Lock now to secure.`;
+      }
+    }
+
+    let activePalaceTier = 'shahi';
+    const palaceTierRates = { shahi: 2800, rajputana: 3900, michelin: 5400 };
+
+    function selectPalaceCateringTier(tier) {
+      playChime();
+      activePalaceTier = tier;
+      ['shahi', 'rajputana', 'michelin'].forEach(t => {
+        const card = document.getElementById(`tierCard${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (t === tier) {
+          card.className = 'p-4 rounded-xl border border-luxuryGold-500/60 bg-luxuryGold-500/10 cursor-pointer transition';
+        } else {
+          card.className = 'p-4 rounded-xl border border-white/10 bg-void cursor-pointer hover:border-white/30 transition';
+        }
+      });
+      calculatePalaceFoodCost();
+    }
+
+    function calculatePalaceFoodCost() {
+      const guests = parseInt(document.getElementById('palaceGuestNumberInput').value) || 1000;
+      const rate = palaceTierRates[activePalaceTier];
+      const total = guests * rate;
+      document.getElementById('palaceCateringTotalDisplay').innerText = `₹${total.toLocaleString('en-IN')} + GST`;
+    }
+
+    function dispatchPalaceBookingLead() {
+      playChime();
+      const host = document.getElementById('palaceHostName').value;
+      const phone = document.getElementById('palaceHostPhone').value;
+      const date = document.getElementById('palaceDateInput').value;
+      const guests = document.getElementById('palaceGuestNumberInput').value;
+      const notes = document.getElementById('palaceHostNotes').value;
+
+      const msg = `Hello Imperial Rajvilas Palace! I wish to inquire about date ${date} for ${guests} guests under the name ${host} (${phone}). Requirements: ${notes}`;
+      window.open(`https://wa.me/919999999999?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    /* -------------------------------------------------------------
+       6. DEMO 2 (RESORT) INTERNAL NAVIGATION & ENGINES
+       ------------------------------------------------------------- */
+    function setResortSubTab(tabName) {
+      playChime();
+      const tabs = ['rooms', 'calculator', 'dining', 'direct'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`resortSubTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const sec = document.getElementById(`resortTabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (btn) btn.classList.remove('active');
+        if (sec) sec.classList.add('hidden');
+      });
+
+      const activeBtn = document.getElementById(`resortSubTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+      const activeSec = document.getElementById(`resortTabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      if (activeSec) activeSec.classList.remove('hidden');
+    }
+
+    const resortPhotos = {
+      villa: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=1600&q=85',
+      chalet: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1600&q=85',
+      spa: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=1600&q=85',
+      sunset: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=85'
+    };
+
+    function setResortPhoto(key) {
+      playChime();
+      const img = document.getElementById('resortHeroImg');
+      if (img) {
+        img.style.opacity = '0.3';
+        setTimeout(() => {
+          img.src = resortPhotos[key];
+          img.style.opacity = '1';
+        }, 180);
+      }
+    }
+
+    function calculateResortTotalTariff() {
+      playChime();
+      const nights = parseInt(document.getElementById('resortNightsSelect').value);
+      const rate = parseInt(document.getElementById('resortCategorySelect').value);
+      const base = nights * rate;
+      const gst = Math.round(base * 0.18);
+      const total = base + gst;
+
+      document.getElementById('resortDisplayBase').innerText = `₹${base.toLocaleString('en-IN')}`;
+      document.getElementById('resortDisplayGst').innerText = `₹${gst.toLocaleString('en-IN')}`;
+      document.getElementById('resortDisplayTotal').innerText = `₹${total.toLocaleString('en-IN')}`;
+    }
+
+    function dispatchResortBooking() {
+      playChime();
+      const checkIn = document.getElementById('resortCheckInDate').value;
+      const nights = document.getElementById('resortNightsSelect').value;
+      const total = document.getElementById('resortDisplayTotal').innerText;
+
+      const msg = `Hello Azure Vista Resort! We wish to book direct for ${nights} nights starting ${checkIn}. Total Direct Folio: ${total}. Please share payment link.`;
+      window.open(`https://wa.me/919999999999?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    /* -------------------------------------------------------------
+       7. DEMO 3 (LAWN) INTERNAL NAVIGATION & ENGINES
+       ------------------------------------------------------------- */
+    function setLawnSubTab(tabName) {
+      playChime();
+      const tabs = ['grounds', 'themes', 'calculator', 'quote'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`lawnSubTab${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const sec = document.getElementById(`lawnTabContent${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (btn) btn.classList.remove('active');
+        if (sec) sec.classList.add('hidden');
+      });
+
+      const activeBtn = document.getElementById(`lawnSubTab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+      const activeSec = document.getElementById(`lawnTabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      if (activeSec) activeSec.classList.remove('hidden');
+    }
+
+    const lawnPhotos = {
+      aerial: 'https://images.unsplash.com/photo-1545232979-fbf68fe9b10d?auto=format&fit=crop&w=1600&q=85',
+      stage: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=85',
+      lighting: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1600&q=85',
+      buffet: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=1600&q=85'
+    };
+
+    function setLawnPhoto(key) {
+      playChime();
+      const img = document.getElementById('lawnHeroImg');
+      if (img) {
+        img.style.opacity = '0.3';
+        setTimeout(() => {
+          img.src = lawnPhotos[key];
+          img.style.opacity = '1';
+        }, 180);
+      }
+    }
+
+    let activeLawnThemeCost = 500000;
+    function selectLawnTheme(theme) {
+      playChime();
+      const costs = { boho: 500000, royal: 750000, concert: 950000 };
+      activeLawnThemeCost = costs[theme];
+
+      ['boho', 'royal', 'concert'].forEach(t => {
+        const box = document.getElementById(`themeBox${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (t === theme) {
+          box.className = 'glass-panel p-5 rounded-2xl border-emeraldPeak/60 bg-emeraldPeak/10 cursor-pointer transition';
+        } else {
+          box.className = 'glass-panel p-5 rounded-2xl border-white/10 bg-void cursor-pointer hover:border-white/30 transition';
+        }
+      });
+      calculateLawnTotalQuote();
+    }
+
+    function calculateLawnTotalQuote() {
+      const groundCost = parseInt(document.getElementById('lawnGatheringSelect').value);
+      const total = groundCost + activeLawnThemeCost;
+      document.getElementById('lawnDisplayTotalDisplay').innerText = `₹${total.toLocaleString('en-IN')} + GST`;
+    }
+
+    function dispatchLawnBookingLead() {
+      playChime();
+      const date = document.getElementById('lawnEventDateInput').value;
+      const total = document.getElementById('lawnDisplayTotalDisplay').innerText;
+      const msg = `Hello Emerald Royal Lawns! I wish to lock the party lawn date for ${date}. Estimated Setup Quotation: ${total}. Let us talk directly.`;
+      window.open(`https://wa.me/919999999999?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    /* -------------------------------------------------------------
+       8. FINANCIAL CALCULATOR & PDF BROCHURE SIMULATION
+       ------------------------------------------------------------- */
+    function calculateSavings() {
+      playChime();
+      const dates = parseInt(document.getElementById('sliderDates').value);
+      const spend = parseInt(document.getElementById('sliderSpend').value);
+      const cut = parseInt(document.getElementById('sliderCut').value);
+
+      document.getElementById('sliderDatesVal').innerText = `${dates} Dates`;
+      document.getElementById('sliderSpendVal').innerText = `₹${spend.toLocaleString('en-IN')}`;
+      document.getElementById('sliderCutVal').innerText = `${cut}%`;
+
+      const saved = Math.round(dates * spend * (cut / 100));
+      document.getElementById('displaySavedProfit').innerText = `₹${saved.toLocaleString('en-IN')}`;
+
+      const waMsg = `Hello Aurelia Studios! We calculated that our venue loses ₹${saved.toLocaleString('en-IN')} annually to broker cuts. We want to deploy our direct website flagship.`;
+      document.getElementById('btnCalculatorWhatsApp').href = `https://wa.me/919999999999?text=${encodeURIComponent(waMsg)}`;
+    }
+
+    function simulatePdfDownload(name) {
+      playChime();
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 z-50 glass-panel border border-luxuryGold-400 px-5 py-3 rounded-xl text-white text-xs font-mono shadow-2xl flex items-center gap-2';
+      toast.innerHTML = `<i class="fa-solid fa-file-pdf text-rose-400"></i> Loaded Brochure: <strong>${name}</strong> (Live preview active)`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3500);
+    }
+
+    window.onload = function() {
+      initThreeJS();
+      animateThreeJS();
+      switchActiveDemo('palace');
+      calculateSavings();
+    };
+  </script>
+</body>
+</html>
